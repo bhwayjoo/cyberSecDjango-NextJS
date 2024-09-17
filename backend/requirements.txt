@@ -25,11 +25,13 @@ google-generativeai==0.8.1
 googleapis-common-protos==1.65.0
 grpcio==1.66.1
 grpcio-status==1.66.1
+gunicorn==23.0.0
 httplib2==0.22.0
 httpretty==1.1.4
 idna==3.10
 lxml==5.3.0
 multidict==6.1.0
+packaging==24.1
 proto-plus==1.24.0
 protobuf==5.28.1
 pyasn1==0.6.1
@@ -50,4 +52,5 @@ tzdata==2024.1
 uritemplate==4.1.1
 urllib3==2.2.3
 wappalyzer==1.0
+whitenoise==6.7.0
 yarl==1.11.1

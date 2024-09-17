@@ -26,6 +26,12 @@ const SubdomainSearch = () => {
           },
         }
       );
+    } catch (err) {
+      console.error(err);
+      setIsLoading(false);
+    }
+
+    try {
       const response = await axios.get(`${apiUrl}/b/subdomain/${domain}/`);
 
       setResults(response.data);
