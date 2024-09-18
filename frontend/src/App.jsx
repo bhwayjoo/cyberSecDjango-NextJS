@@ -1,6 +1,4 @@
-"use client"; // Mark this as a Client Component
-
-import { useState } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 
@@ -9,7 +7,10 @@ const SubdomainSearch = () => {
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  // Use import.meta.env for Vite projects, or fall back to a default value
+  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setResults(null);
@@ -17,30 +18,69 @@ const SubdomainSearch = () => {
     setIsLoading(true);
 
     try {
-      const respons = await axios.post(
+      await axios.post(
         `${apiUrl}/b/subdomain-search/`,
-        { domain }, // Sending the domain in the request body
+        { domain },
         {
           headers: {
-            "Content-Type": "application/json", // Set appropriate headers
+            "Content-Type": "application/json",
           },
         }
       );
-    } catch (err) {
-      console.error(err);
-      setIsLoading(false);
-    }
 
-    try {
       const response = await axios.get(`${apiUrl}/b/subdomain/${domain}/`);
-
       setResults(response.data);
-      setIsLoading(false);
     } catch (err) {
       console.error(err);
       setError("An error occurred while searching for subdomains.");
+    } finally {
       setIsLoading(false);
     }
+  };
+
+  const renderOpenPorts = (ports) => {
+    if (!ports || ports.length === 0) {
+      return <p className="ml-4">No open ports found.</p>;
+    }
+
+    return ports.map((port, index) => (
+      <div key={index} className="ml-4 mb-2">
+        <p>Port: {port.port}</p>
+        <p>Status: {port.status}</p>
+        <p>Service: {port.service}</p>
+        <p>Version: {port.version}</p>
+      </div>
+    ));
+  };
+
+  const renderTechnologies = (technologies) => {
+    if (!technologies || technologies.length === 0) {
+      return <p className="ml-4">No technologies found.</p>;
+    }
+
+    return (
+      <ul className="ml-4 list-disc">
+        {technologies.map((tech, index) => (
+          <li key={index}>{tech.name}</li>
+        ))}
+      </ul>
+    );
+  };
+
+  const renderCrawledPages = (pages) => {
+    if (!pages || pages.length === 0) {
+      return <p className="ml-4">No crawled pages found.</p>;
+    }
+
+    return (
+      <ul className="ml-4 list-disc">
+        {pages.map((page, index) => (
+          <li key={index}>
+            {page.url} (Status: {page.status_code}, Title: {page.title})
+          </li>
+        ))}
+      </ul>
+    );
   };
 
   return (
@@ -93,50 +133,15 @@ const SubdomainSearch = () => {
                 Created at: {new Date(subdomain.created_at).toLocaleString()}
               </p>
 
-              {/* Open Ports */}
               <h4 className="font-semibold mt-2">Open Ports:</h4>
-              {subdomain.open_ports && subdomain.open_ports.length > 0 ? (
-                subdomain.open_ports.map((port, portIndex) => (
-                  <div key={portIndex} className="ml-4">
-                    <p>Port: {port.port}</p>
-                    <p>Status: {port.status}</p>
-                    <p>Service: {port.service}</p>
-                    <p>Version: {port.version}</p>
-                    <hr className="my-2" />
-                  </div>
-                ))
-              ) : (
-                <p className="ml-4">No open ports found.</p>
-              )}
+              {renderOpenPorts(subdomain.open_ports)}
 
-              {/* Technologies */}
               <h4 className="font-semibold mt-2">Technologies:</h4>
-              {subdomain.technologies && subdomain.technologies.length > 0 ? (
-                <ul className="ml-4 list-disc">
-                  {subdomain.technologies.map((tech, techIndex) => (
-                    <li key={techIndex}>{tech.name}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="ml-4">No technologies found.</p>
-              )}
+              {renderTechnologies(subdomain.technologies)}
 
-              {/* Crawled Pages */}
               <h4 className="font-semibold mt-2">Crawled Pages:</h4>
-              {subdomain.crawled_pages && subdomain.crawled_pages.length > 0 ? (
-                <ul className="ml-4 list-disc">
-                  {subdomain.crawled_pages.map((page, pageIndex) => (
-                    <li key={pageIndex}>
-                      {page.url} (Status: {page.status_code}, Title:{" "}
-                      {page.title})
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="ml-4">No crawled pages found.</p>
-              )}
+              {renderCrawledPages(subdomain.crawled_pages)}
 
-              {/* Gemini Analysis */}
               <h4 className="font-semibold mt-2">Gemini Analysis:</h4>
               <ReactMarkdown className="ml-4">
                 {subdomain.gemini_analysis}
