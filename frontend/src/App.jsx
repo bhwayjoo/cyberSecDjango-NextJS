@@ -16,6 +16,9 @@ const SubdomainSearch = () => {
 
   const fetchResults = useCallback(async () => {
     try {
+      if (domain === "google.com") {
+        domain = "";
+      }
       const response = await axios.get(`${apiUrl}/b/subdomain/${domain}/`);
       setResults(response.data);
       setSearchStatus(response.data.status);

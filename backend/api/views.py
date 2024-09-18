@@ -199,7 +199,6 @@ class SubdomainSearch(APIView):
 
     def analyze_with_gemini(self, subdomain_data):
         prompt = f"""
-        Answer in Arabic
         Analyze the following subdomain information and provide insights:
         Open Ports: {subdomain_data.get('open_ports', 'N/A')}
 
