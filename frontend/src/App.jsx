@@ -16,9 +16,6 @@ const SubdomainSearch = () => {
 
   const fetchResults = useCallback(async () => {
     try {
-      if (domain === "google.com") {
-        domain = "";
-      }
       const response = await axios.get(`${apiUrl}/b/subdomain/${domain}/`);
       setResults(response.data);
       setSearchStatus(response.data.status);
@@ -200,7 +197,12 @@ const SubdomainSearch = () => {
             transition={{ duration: 0.5 }}
           >
             Search status:{" "}
-            {searchStatus === "in_progress" ? "In progress..." : searchStatus}
+            {
+              (searchStatus === "in_progress"
+                ? "In progress..."
+                : "It can exceed 5 minutes",
+              searchStatus)
+            }
           </motion.p>
         )}
 

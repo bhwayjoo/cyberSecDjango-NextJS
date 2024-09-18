@@ -7,7 +7,7 @@ from rest_framework import status
 import sublist3r
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urljoin
 import warnings
 from Wappalyzer import Wappalyzer, WebPage
@@ -15,7 +15,7 @@ import google.generativeai as genai
 from django.conf import settings
 import logging
 from .models import Domain, Subdomain, OpenPort, CrawledPage, Technology
-from .serializers import DomainSerializer, SubdomainSerializer
+from .serializers import DomainSerializer
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -60,34 +60,42 @@ class SubdomainSearch(APIView):
                 domain_obj.save()
                 return Response({"message": "No subdomains found", "domain_id": domain_obj.id, "status": "complete"}, status=status.HTTP_200_OK)
 
-            subdomain_results = []
+            # Crawl the root domain and analyze technologies
+            self.process_subdomain(domain_obj, domain, is_root=True)
 
             # Use ThreadPoolExecutor to scan subdomains in parallel
             with ThreadPoolExecutor(max_workers=10) as executor:
-                future_to_subdomain = {executor.submit(self.scan_subdomain, subdomain): subdomain for subdomain in subdomains}
-                for future in as_completed(future_to_subdomain):
-                    result = future.result()
-                    # Only append subdomains that resolved to an IP
-                    if result.get('ip'):
-                        subdomain_results.append(result)
+                list(executor.map(lambda subdomain: self.process_subdomain(domain_obj, subdomain), subdomains))
 
-            # Crawl the root domain and analyze technologies
-            root_crawled_pages = self.crawl_website(f'http://{domain}', f'http://{domain}', set())
-            root_technologies = self.identify_technologies(f'http://{domain}')
-            root_result = {
-                "subdomain": domain,
-                "status": "reachable",
-                "crawled_pages": root_crawled_pages,
-                "technologies": root_technologies,
-                "gemini_analysis": self.analyze_with_gemini({
-                    'open_ports': [],  # No specific open ports for root domain
-                    'technologies': root_technologies
-                })
+            # Set status to complete
+            domain_obj.status = "complete"
+            domain_obj.save()
+
+            # Serialize the data
+            serializer = DomainSerializer(domain_obj)
+            
+            # Create the response data
+            response_data = {
+                "domain_id": domain_obj.id,
+                "domain_data": serializer.data,
+                "status": domain_obj.status
             }
-            subdomain_results.append(root_result)
 
-            # Save results to database
-            for result in subdomain_results:
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {str(e)}")
+            if 'domain_obj' in locals():
+                domain_obj.status = "error"
+                domain_obj.save()
+            return Response({"error": "An unexpected error occurred", "domain_id": domain_obj.id, "status": "error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def process_subdomain(self, domain_obj, subdomain, is_root=False):
+        try:
+            result = self.scan_subdomain(subdomain)
+            
+            # Only process and save results if the subdomain is reachable or it's the root domain
+            if result['status'] == 'reachable' or is_root:
                 subdomain_obj = Subdomain.objects.create(
                     domain=domain_obj,
                     name=result['subdomain'],
@@ -119,28 +127,8 @@ class SubdomainSearch(APIView):
                         name=tech
                     )
 
-            # Set status to complete
-            domain_obj.status = "complete"
-            domain_obj.save()
-
-            # Serialize the data
-            serializer = DomainSerializer(domain_obj)
-            
-            # Create the response data
-            response_data = {
-                "domain_id": domain_obj.id,
-                "domain_data": serializer.data,
-                "status": domain_obj.status
-            }
-
-            return Response(response_data, status=status.HTTP_200_OK)
-
         except Exception as e:
-            logger.error(f"An unexpected error occurred: {str(e)}")
-            if 'domain_obj' in locals():
-                domain_obj.status = "error"
-                domain_obj.save()
-            return Response({"error": "An unexpected error occurred", "domain_id": domain_obj.id, "status": "error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"Error processing subdomain {subdomain}: {str(e)}")
 
     def check_gemini_api_status(self):
         try:
@@ -195,18 +183,18 @@ class SubdomainSearch(APIView):
             return technologies
         except Exception as e:
             logger.error(f"Error identifying technologies for {url}: {str(e)}")
-            return f"An error occurred: {e}"
+            return []
 
     def analyze_with_gemini(self, subdomain_data):
         prompt = f"""
         Analyze the following subdomain information and provide insights:
         Open Ports: {subdomain_data.get('open_ports', 'N/A')}
+        Technologies: {subdomain_data.get('technologies', 'N/A')}
 
         Please provide a summary of potential security implications based on 
         1. the open ports and services 
-        2. the technologies {subdomain_data.get('technologies', 'N/A')}.
+        2. the technologies identified.
         """
-        print('portoptn hdsfk sdfk ',subdomain_data.get('open_ports', 'N/A'))
         try:
             response = model.generate_content(prompt)
             return response.text
@@ -246,7 +234,7 @@ class SubdomainSearch(APIView):
                                 subdomain_url = f'{protocol}://{subdomain}'
                                 crawled_pages.extend(self.crawl_website(subdomain_url, subdomain_url, set()))
                                 technologies = self.identify_technologies(subdomain_url)
-                                identified_technologies.append(technologies)
+                                identified_technologies.extend(technologies)
 
                 except socket.error as e:
                     logger.error(f"Socket error for {subdomain}:{port} - {e}")
