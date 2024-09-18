@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
+import { motion } from "framer-motion";
 
 const SubdomainSearch = () => {
   const [domain, setDomain] = useState("");
@@ -8,6 +9,7 @@ const SubdomainSearch = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [searchStatus, setSearchStatus] = useState(null);
+  const [toggledSubdomains, setToggledSubdomains] = useState({}); // State for toggling
 
   const apiUrl =
     "https://0471a463-7b15-4181-a9c5-3bfd4aac048d-dev.e1-eu-north-azure.choreoapis.dev/djangoxreact/backendd/v1.0";
@@ -65,6 +67,13 @@ const SubdomainSearch = () => {
     }
   };
 
+  const toggleSubdomainDetails = (index) => {
+    setToggledSubdomains((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
+
   // Rendering functions
   const renderOpenPorts = (ports) => {
     if (!ports || ports.length === 0) {
@@ -112,9 +121,14 @@ const SubdomainSearch = () => {
   };
 
   return (
-    <div className="min-h-screen flex justify-center items-center">
-      <div className="flex flex-col items-center bg-white p-6 rounded-lg shadow-lg w-full max-w-4xl">
-        <h1 className="text-3xl font-bold text-center mb-6">
+    <motion.div
+      className="min-h-screen flex justify-center items-center bg-gradient-to-r from-blue-400 to-purple-500"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.8 }}
+    >
+      <div className="flex flex-col items-center bg-white p-8 rounded-lg shadow-2xl w-full max-w-4xl">
+        <h1 className="text-4xl font-bold text-center mb-6 text-gray-800">
           Subdomain Search
         </h1>
 
@@ -127,26 +141,33 @@ const SubdomainSearch = () => {
               placeholder="Enter domain"
               className="appearance-none bg-transparent border-none w-full text-gray-700 mr-3 py-1 px-2 leading-tight focus:outline-none"
             />
-            <button
+            <motion.button
               type="submit"
               disabled={isLoading}
               className={`flex-shrink-0 ${
                 isLoading
                   ? "bg-blue-300 cursor-not-allowed"
                   : "bg-blue-500 hover:bg-blue-700"
-              } text-sm text-white py-1 px-2 rounded`}
+              } text-sm text-white py-1 px-4 rounded-full shadow-md`}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
             >
               {isLoading ? "Searching..." : "Search"}
-            </button>
+            </motion.button>
           </div>
         </form>
 
         {error && <p className="text-red-500 text-center mt-4">{error}</p>}
 
         {isLoading && (
-          <div className="flex justify-center items-center">
+          <motion.div
+            className="flex justify-center items-center"
+            initial={{ rotate: 0 }}
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 1.5 }}
+          >
             <svg
-              className="animate-spin h-10 w-10 text-blue-500"
+              className="animate-spin h-12 w-12 text-blue-500"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -165,30 +186,41 @@ const SubdomainSearch = () => {
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zM2 12a10 10 0 0110-10V0C4.477 0 0 4.477 0 10h2z"
               ></path>
             </svg>
-          </div>
+          </motion.div>
         )}
 
         {searchStatus && (
-          <p className="text-center mt-4">
+          <motion.p
+            className="text-center mt-4 text-lg font-semibold text-blue-700"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
             Search status:{" "}
             {searchStatus === "in_progress" ? "In progress..." : searchStatus}
-          </p>
+          </motion.p>
         )}
 
         {results && (
-          <div className="mt-8 w-full">
-            <h2 className="text-2xl font-bold mb-4">
+          <motion.div
+            className="mt-8 w-full"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl font-bold mb-4 text-gray-700">
               Results for {results.name}
             </h2>
             <p>Status: {results.status}</p>
             <p>Created at: {new Date(results.created_at).toLocaleString()}</p>
 
             {results.subdomains.map((subdomain, index) => (
-              <div
+              <motion.div
                 key={index}
-                className="bg-white shadow-md rounded-md p-4 mb-6"
+                className="bg-white shadow-lg rounded-md p-6 mb-6 transition-all duration-300"
+                whileHover={{ scale: 1.05 }}
               >
-                <h3 className="text-xl font-semibold">
+                <h3 className="text-2xl font-semibold text-gray-800">
                   Subdomain: {subdomain.name}
                 </h3>
                 <p>IP: {subdomain.ip}</p>
@@ -197,25 +229,42 @@ const SubdomainSearch = () => {
                   Created at: {new Date(subdomain.created_at).toLocaleString()}
                 </p>
 
-                <h4 className="font-semibold mt-2">Open Ports:</h4>
-                {renderOpenPorts(subdomain.open_ports)}
+                <motion.button
+                  className="bg-blue-500 text-white py-1 px-4 rounded-full mt-4"
+                  onClick={() => toggleSubdomainDetails(index)}
+                  whileHover={{ scale: 1.05 }}
+                >
+                  {toggledSubdomains[index] ? "Hide Details" : "Show Details"}
+                </motion.button>
 
-                <h4 className="font-semibold mt-2">Technologies:</h4>
-                {renderTechnologies(subdomain.technologies)}
+                {toggledSubdomains[index] && (
+                  <motion.div
+                    className="mt-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <h4 className="font-semibold mt-2">Open Ports:</h4>
+                    {renderOpenPorts(subdomain.open_ports)}
 
-                <h4 className="font-semibold mt-2">Crawled Pages:</h4>
-                {renderCrawledPages(subdomain.crawled_pages)}
+                    <h4 className="font-semibold mt-2">Technologies:</h4>
+                    {renderTechnologies(subdomain.technologies)}
 
-                <h4 className="font-semibold mt-2">Gemini Analysis:</h4>
-                <ReactMarkdown className="ml-4">
-                  {subdomain.gemini_analysis}
-                </ReactMarkdown>
-              </div>
+                    <h4 className="font-semibold mt-2">Crawled Pages:</h4>
+                    {renderCrawledPages(subdomain.crawled_pages)}
+
+                    <h4 className="font-semibold mt-2">AI Analysis</h4>
+                    <ReactMarkdown className="prose">
+                      {subdomain.gemini_analysis}
+                    </ReactMarkdown>
+                  </motion.div>
+                )}
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
