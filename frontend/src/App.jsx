@@ -34,7 +34,7 @@ const SubdomainSearch = () => {
         clearInterval(pollInterval);
         setIsLoading(false);
       }
-    }, 3000);
+    }, 1000);
 
     return () => clearInterval(pollInterval);
   }, [fetchResults]);
