@@ -202,8 +202,11 @@ class SubdomainSearch(APIView):
         Analyze the following subdomain information and provide insights:
         Open Ports: {subdomain_data.get('open_ports', 'N/A')}
 
-        Please provide a summary of potential security implications based on the open ports and services and technologies {subdomain_data.get('technologies', 'N/A')}.
+        Please provide a summary of potential security implications based on 
+        1. the open ports and services 
+        2. the technologies {subdomain_data.get('technologies', 'N/A')}.
         """
+        print('portoptn hdsfk sdfk ',subdomain_data.get('open_ports', 'N/A'))
         try:
             response = model.generate_content(prompt)
             return response.text
