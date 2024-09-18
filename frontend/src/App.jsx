@@ -9,7 +9,8 @@ const SubdomainSearch = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   // Use import.meta.env for Vite projects, or fall back to a default value
-  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const apiUrl =
+    "https://0471a463-7b15-4181-a9c5-3bfd4aac048d-dev.e1-eu-north-azure.choreoapis.dev/djangoxreact/backendd/v1.0";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
